@@ -339,18 +339,18 @@ func TestParallel1024CLIENT_64BMSG_64CNT(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1024)
 	for i := 0; i < 1024; i++ {
-		go parallel_client(&wg)
+		go parallelClient(&wg)
 	}
 	wg.Wait()
 }
 
-func parallel_client(wg *sync.WaitGroup) (err error) {
+func parallelClient(wg *sync.WaitGroup) (err error) {
 	cli, err := dialEcho()
 	if err != nil {
 		panic(err)
 	}
 
-	err = echo_tester(cli, 64, 64)
+	err = echoTester(cli, 64, 64)
 	wg.Done()
 	return
 }
@@ -378,7 +378,7 @@ func speedclient(b *testing.B, nbytes int) {
 		panic(err)
 	}
 
-	if err := echo_tester(cli, nbytes, b.N); err != nil {
+	if err := echoTester(cli, nbytes, b.N); err != nil {
 		b.Fail()
 	}
 	b.SetBytes(int64(nbytes))
@@ -407,11 +407,11 @@ func sinkclient(b *testing.B, nbytes int) {
 		panic(err)
 	}
 
-	sink_tester(cli, nbytes, b.N)
+	sinkTester(cli, nbytes, b.N)
 	b.SetBytes(int64(nbytes))
 }
 
-func echo_tester(cli net.Conn, msglen, msgcount int) error {
+func echoTester(cli net.Conn, msglen, msgcount int) error {
 	buf := make([]byte, msglen)
 	for i := 0; i < msgcount; i++ {
 		// send packet
@@ -425,18 +425,17 @@ func echo_tester(cli net.Conn, msglen, msgcount int) error {
 			n, err := cli.Read(buf)
 			if err != nil {
 				return err
-			} else {
-				nrecv += n
-				if nrecv == msglen {
-					break
-				}
+			}
+			nrecv += n
+			if nrecv == msglen {
+				break
 			}
 		}
 	}
 	return nil
 }
 
-func sink_tester(cli *UDPSession, msglen, msgcount int) error {
+func sinkTester(cli *UDPSession, msglen, msgcount int) error {
 	// sender
 	buf := make([]byte, msglen)
 	for i := 0; i < msgcount; i++ {

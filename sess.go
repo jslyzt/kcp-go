@@ -148,11 +148,11 @@ func newUDPSession(conv uint32, dataShards, parityShards int, l *Listener, conn 
 	}
 
 	sess.kcp = NewKCP(conv, func(buf []byte, size int) {
-		if size >= IKCP_OVERHEAD {
+		if size >= IkcpOverhead {
 			sess.output(buf[:size])
 		}
 	})
-	sess.kcp.SetMtu(IKCP_MTU_DEF - sess.headerSize)
+	sess.kcp.SetMtu(IkcpMtuDef - sess.headerSize)
 	blacklist.add(remote.String(), conv)
 
 	// add current session to the global updater,
@@ -256,7 +256,7 @@ func (s *UDPSession) Write(b []byte) (n int, err error) {
 		}
 
 		// api flow control
-		if s.kcp.WaitSnd() < int(s.kcp.snd_wnd) {
+		if s.kcp.WaitSnd() < int(s.kcp.sndWnd) {
 			n = len(b)
 			for {
 				if len(b) <= int(s.kcp.mss) {
@@ -517,7 +517,7 @@ func (s *UDPSession) output(buf []byte) {
 func (s *UDPSession) update() (interval time.Duration) {
 	s.mu.Lock()
 	s.kcp.flush(false)
-	if s.kcp.WaitSnd() < int(s.kcp.snd_wnd) {
+	if s.kcp.WaitSnd() < int(s.kcp.sndWnd) {
 		s.notifyWriteEvent()
 	}
 	interval = time.Duration(s.kcp.interval) * time.Millisecond
@@ -614,7 +614,7 @@ func (s *UDPSession) kcpInput(data []byte) {
 func (s *UDPSession) receiver(ch chan<- []byte) {
 	for {
 		data := xmitBuf.Get().([]byte)[:mtuLimit]
-		if n, _, err := s.conn.ReadFrom(data); err == nil && n >= s.headerSize+IKCP_OVERHEAD {
+		if n, _, err := s.conn.ReadFrom(data); err == nil && n >= s.headerSize+IkcpOverhead {
 			select {
 			case ch <- data[:n]:
 			case <-s.die:
@@ -781,7 +781,7 @@ func (l *Listener) monitor() {
 func (l *Listener) receiver(ch chan<- inPacket) {
 	for {
 		data := xmitBuf.Get().([]byte)[:mtuLimit]
-		if n, from, err := l.conn.ReadFrom(data); err == nil && n >= l.headerSize+IKCP_OVERHEAD {
+		if n, from, err := l.conn.ReadFrom(data); err == nil && n >= l.headerSize+IkcpOverhead {
 			select {
 			case ch <- inPacket{from, data[:n]}:
 			case <-l.die:
