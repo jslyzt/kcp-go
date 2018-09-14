@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 )
 
-// 常量定义
+// const define
 const (
 	IkcpRtoNdl     = 30  // no delay min rto
 	IkcpRtoMin     = 100 // normal min rto

@@ -1,4 +1,4 @@
-<img src="kcp-go.png" alt="kcp-go" height="50px" />
+<img src="res/kcp-go.png" alt="kcp-go" height="50px" />
 
 
 [![GoDoc][1]][2] [![Powered][9]][10] [![MIT licensed][11]][12] [![Build Status][3]][4] [![Go Report Card][5]][6] [![Coverage Statusd][7]][8]
@@ -41,7 +41,7 @@ For complete documentation, see the associated [Godoc](https://godoc.org/github.
 
 ## Specification
 
-<img src="frame.png" alt="Frame Format" height="109px" />
+<img src="res/frame.png" alt="Frame Format" height="109px" />
 
 ```
 +-----------------+
