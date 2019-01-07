@@ -13,3 +13,4 @@ _cgo_export.*
 *.exe
 *.test
 *.prof
+/.idea
