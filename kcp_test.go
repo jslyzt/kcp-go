@@ -12,7 +12,7 @@ import (
 )
 
 func iclock() int32 {
-	return int32((time.Now().UnixNano() / 1000000) & 0xffffffff)
+	return int32(currentMs())
 }
 
 type DelayPacket struct {
@@ -33,7 +33,6 @@ func (p *DelayPacket) ts() int32      { return p._ts }
 func (p *DelayPacket) setts(ts int32) { p._ts = ts }
 
 type DelayTunnel struct{ *list.List }
-type Random *rand.Rand
 type LatencySimulator struct {
 	current                        int32
 	lostrate, rttmin, rttmax, nmax int
@@ -287,7 +286,7 @@ func TestNetwork(t *testing.T) {
 
 func BenchmarkFlush(b *testing.B) {
 	kcp := NewKCP(1, func(buf []byte, size int) {})
-	kcp.sndBuf = make([]segment, 32)
+	kcp.sndBuf = make([]segment, 1024)
 	for k := range kcp.sndBuf {
 		kcp.sndBuf[k].xmit = 1
 		kcp.sndBuf[k].resendts = currentMs() + 10000
