@@ -671,7 +671,7 @@ type (
 		conn         net.PacketConn // the underlying packet connection
 
 		sessions        map[string]*UDPSession // all sessions accepted by this Listener
-		sessionLock     sync.Mutex
+		sessionLock     sync.RWMutex
 		chAccepts       chan *UDPSession // Listen() backlog
 		chSessionClosed chan net.Addr    // session close queue
 		headerSize      int              // the additional header to a KCP frame
@@ -716,12 +716,12 @@ func (l *Listener) monitor() {
 					if addr == lastAddr {
 						s, ok = lastSession, true
 					} else {
-						l.sessionLock.Lock()
+						l.sessionLock.RLock()
 						if s, ok = l.sessions[addr]; ok {
 							lastSession = s
 							lastAddr = addr
 						}
-						l.sessionLock.Unlock()
+						l.sessionLock.RUnlock()
 					}
 
 					if !ok { // new session
@@ -834,13 +834,17 @@ func (l *Listener) Close() error {
 
 // closeSession notify the listener that a session has closed
 func (l *Listener) closeSession(remote net.Addr) (ret bool) {
-	l.sessionLock.Lock()
-	defer l.sessionLock.Unlock()
-	if _, ok := l.sessions[remote.String()]; ok {
-		delete(l.sessions, remote.String())
-		return true
+	{
+		l.sessionLock.RLock()
+		_, ret = l.sessions[remote.String()]
+		l.sessionLock.RUnlock()
 	}
-	return false
+	if ret == true {
+		l.sessionLock.Lock()
+		delete(l.sessions, remote.String())
+		l.sessionLock.Unlock()
+	}
+	return ret
 }
 
 // Addr returns the listener's network address, The Addr returned is shared by all invocations of Addr, so do not modify it.
