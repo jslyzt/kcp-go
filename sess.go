@@ -684,9 +684,12 @@ type (
 // monitor incoming data for all connections of server
 func (l *Listener) monitor() {
 	// a cache for session object last used
-	var lastAddr string
-	var lastSession *UDPSession
-	buf := make([]byte, mtuLimit)
+	var (
+		s, lstsess    *UDPSession
+		ok            bool
+		buf           = make([]byte, mtuLimit)
+		addr, lstaddr string
+	)
 	for {
 		if n, from, err := l.conn.ReadFrom(buf); err == nil {
 			if n >= l.headerSize+IkcpOverhead {
@@ -707,19 +710,22 @@ func (l *Listener) monitor() {
 				}
 
 				if dataValid {
-					addr := from.String()
-					var s *UDPSession
-					var ok bool
+					s, ok, addr = nil, false, from.String()
 
 					// the packets received from an address always come in batch,
 					// cache the session for next packet, without querying map.
-					if addr == lastAddr {
-						s, ok = lastSession, true
-					} else {
+					if addr == lstaddr {
+						if lstsess != nil && lstsess.isClosed == false {
+							s, ok = lstsess, true
+						} else {
+							lstaddr, lstsess = "", nil
+						}
+					}
+					if s == nil {
 						l.sessionLock.RLock()
-						if s, ok = l.sessions[addr]; ok {
-							lastSession = s
-							lastAddr = addr
+						if s, ok = l.sessions[addr]; ok == true {
+							lstsess = s
+							lstaddr = addr
 						}
 						l.sessionLock.RUnlock()
 					}
@@ -740,7 +746,7 @@ func (l *Listener) monitor() {
 							}
 
 							if convValid { // creates a new session only if the 'conv' field in kcp is accessible
-								s := newUDPSession(conv, l.dataShards, l.parityShards, l, l.conn, from, l.block)
+								s = newUDPSession(conv, l.dataShards, l.parityShards, l, l.conn, from, l.block)
 								s.kcpInput(data)
 								l.sessionLock.Lock()
 								l.sessions[addr] = s
@@ -748,7 +754,7 @@ func (l *Listener) monitor() {
 								l.chAccepts <- s
 							}
 						}
-					} else {
+					} else if s != nil {
 						s.kcpInput(data)
 					}
 				}
